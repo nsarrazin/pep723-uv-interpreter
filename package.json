@@ -18,6 +18,10 @@
       {
         "command": "pep723.pickInterpreter",
         "title": "PEP723: Pick Interpreter"
+      },
+      {
+        "command": "pep723.createScript",
+        "title": "PEP723: Create New Script"
       }
     ],
     "configuration": {

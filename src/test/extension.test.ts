@@ -221,12 +221,14 @@ print("Hello, World!")`;
 
       // Register and execute the command
       const context = { subscriptions: [] };
-      let commandCallback: any;
+      let pickInterpreterCallback: any;
 
       sandbox
         .stub(vscode.commands, "registerCommand")
         .callsFake((command: string, callback: () => void) => {
-          commandCallback = callback;
+          if (command === "pep723.pickInterpreter") {
+            pickInterpreterCallback = callback;
+          }
           return { dispose: () => {} };
         });
 
@@ -239,8 +241,8 @@ print("Hello, World!")`;
 
       extension.activate(context as any);
 
-      // Execute the command
-      await commandCallback();
+      // Execute the pickInterpreter command
+      await pickInterpreterCallback();
 
       assert.ok(
         showInformationMessageStub.calledWith("No active editor."),
@@ -259,12 +261,14 @@ print("Hello, World!")`;
 
       // Register and execute the command
       const context = { subscriptions: [] };
-      let commandCallback: any;
+      let pickInterpreterCallback: any;
 
       sandbox
         .stub(vscode.commands, "registerCommand")
         .callsFake((command: string, callback: () => void) => {
-          commandCallback = callback;
+          if (command === "pep723.pickInterpreter") {
+            pickInterpreterCallback = callback;
+          }
           return { dispose: () => {} };
         });
 
@@ -277,12 +281,70 @@ print("Hello, World!")`;
 
       extension.activate(context as any);
 
-      // Execute the command
-      await commandCallback();
+      // Execute the pickInterpreter command
+      await pickInterpreterCallback();
 
       assert.ok(
         showInformationMessageStub.calledWith("No PEP 723 header found."),
         "Should show no PEP723 header message"
+      );
+    });
+
+    test("should create new script with PEP723 scaffolding", async () => {
+      const openTextDocumentStub = sandbox.stub(
+        vscode.workspace,
+        "openTextDocument"
+      );
+      const showTextDocumentStub = sandbox.stub(
+        vscode.window,
+        "showTextDocument"
+      );
+
+      openTextDocumentStub.resolves({} as any);
+      showTextDocumentStub.resolves();
+
+      // Register and execute the command
+      const context = { subscriptions: [] };
+      let createScriptCallback: any;
+
+      sandbox
+        .stub(vscode.commands, "registerCommand")
+        .callsFake((command: string, callback: () => void) => {
+          if (command === "pep723.createScript") {
+            createScriptCallback = callback;
+          }
+          return { dispose: () => {} };
+        });
+
+      sandbox
+        .stub(vscode.window, "onDidChangeActiveTextEditor")
+        .returns({ dispose: () => {} });
+      sandbox
+        .stub(vscode.workspace, "onDidOpenTextDocument")
+        .returns({ dispose: () => {} });
+
+      extension.activate(context as any);
+
+      // Execute the createScript command
+      await createScriptCallback();
+
+      assert.ok(openTextDocumentStub.called, "Should create new text document");
+
+      const callArgs = openTextDocumentStub.firstCall?.args[0];
+      assert.ok(callArgs, "Should have call arguments");
+      assert.ok(callArgs.content, "Should have content");
+      assert.ok(
+        callArgs.content.includes("# /// script"),
+        "Should include PEP723 metadata"
+      );
+      assert.ok(
+        callArgs.content.includes("#!/usr/bin/env -S uv run --script"),
+        "Should include shebang"
+      );
+      assert.strictEqual(
+        callArgs.language,
+        "python",
+        "Should set language to python"
       );
     });
   });

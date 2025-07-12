@@ -1,11 +1,52 @@
 // src/extension.ts
 import * as vscode from "vscode";
 import { exec } from "child_process";
+import * as path from "path";
 
 function hasPEP723Header(document: vscode.TextDocument): boolean {
   // only check first 20 lines
   const head = document.getText(new vscode.Range(0, 0, 20, 0));
   return /^#\s*\/\/\/\s*script/m.test(head);
+}
+
+function createNewScript(): void {
+  const template = `#!/usr/bin/env -S uv run --script
+# -*- coding: utf-8 -*-
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "click",
+# ]
+# ///
+
+import sys
+import click
+
+@click.command()
+@click.option('--name', default='World', help='Name to greet')
+def hello(name: str):
+    """Simple program that greets NAME."""
+    click.echo(f'Hello, {name}!')
+
+
+if __name__ == '__main__':
+    hello()
+`;
+
+  // Create a new untitled document
+  vscode.workspace
+    .openTextDocument({
+      content: template,
+      language: "python",
+    })
+    .then(
+      (doc) => {
+        vscode.window.showTextDocument(doc);
+      },
+      (err) => {
+        vscode.window.showErrorMessage(`Failed to create new script: ${err}`);
+      }
+    );
 }
 
 function pickInterpreter(document: vscode.TextDocument): void {
@@ -75,7 +116,14 @@ export function activate(ctx: vscode.ExtensionContext) {
     }
   );
 
+  // Register the create script command
+  const createScriptDisposable = vscode.commands.registerCommand(
+    "pep723.createScript",
+    createNewScript
+  );
+
   ctx.subscriptions.push(disposable);
+  ctx.subscriptions.push(createScriptDisposable);
 
   // Auto-pick functionality
   function autoPickIfEnabled(document: vscode.TextDocument): void {
