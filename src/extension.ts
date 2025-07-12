@@ -13,9 +13,12 @@ function pickInterpreter(document: vscode.TextDocument): void {
     return;
   }
 
-  // run uv to find the interpreter
+  // Get the file path for the current document
+  const filePath = document.uri.fsPath;
+
+  // run uv to find the interpreter for this specific script
   exec(
-    "uv python find --script",
+    `uv python find --script "${filePath}"`,
     { cwd: vscode.workspace.rootPath },
     (err, stdout, stderr) => {
       if (err) {
@@ -27,24 +30,26 @@ function pickInterpreter(document: vscode.TextDocument): void {
         vscode.window.showErrorMessage("No interpreter returned.");
         return;
       }
-      // update the workspace setting
+
+      // Determine the appropriate configuration target
+      const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
+      const configTarget = workspaceFolder
+        ? vscode.ConfigurationTarget.WorkspaceFolder
+        : vscode.ConfigurationTarget.Global;
+
+      // Update the workspace or global setting
       const cfg = vscode.workspace.getConfiguration("python", document.uri);
-      cfg
-        .update(
-          "defaultInterpreterPath",
-          interp,
-          vscode.ConfigurationTarget.WorkspaceFolder
-        )
-        .then(
-          () => {
-            vscode.window.showInformationMessage(
-              `Set interpreter to ${interp}`
-            );
-          },
-          (e) => {
-            vscode.window.showErrorMessage(`Failed to set interpreter: ${e}`);
-          }
-        );
+      cfg.update("defaultInterpreterPath", interp, configTarget).then(
+        () => {
+          const scope = workspaceFolder ? "workspace" : "global";
+          vscode.window.showInformationMessage(
+            `Set interpreter to ${interp} (${scope})`
+          );
+        },
+        (e) => {
+          vscode.window.showErrorMessage(`Failed to set interpreter: ${e}`);
+        }
+      );
     }
   );
 }
