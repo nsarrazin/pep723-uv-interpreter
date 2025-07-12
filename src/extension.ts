@@ -50,6 +50,11 @@ if __name__ == '__main__':
 }
 
 function pickInterpreter(document: vscode.TextDocument): void {
+  // Only process Python files
+  if (document.languageId !== "python") {
+    return;
+  }
+
   if (!hasPEP723Header(document)) {
     return;
   }
@@ -83,9 +88,6 @@ function pickInterpreter(document: vscode.TextDocument): void {
       cfg.update("defaultInterpreterPath", interp, configTarget).then(
         () => {
           const scope = workspaceFolder ? "workspace" : "global";
-          vscode.window.showInformationMessage(
-            `Set interpreter to ${interp} (${scope})`
-          );
         },
         (e) => {
           vscode.window.showErrorMessage(`Failed to set interpreter: ${e}`);
@@ -107,6 +109,13 @@ export function activate(ctx: vscode.ExtensionContext) {
       }
 
       const doc = editor.document;
+      if (doc.languageId !== "python") {
+        vscode.window.showInformationMessage(
+          "This command only works with Python files."
+        );
+        return;
+      }
+
       if (!hasPEP723Header(doc)) {
         vscode.window.showInformationMessage("No PEP 723 header found.");
         return;
