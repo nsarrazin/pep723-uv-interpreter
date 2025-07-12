@@ -39,6 +39,8 @@
     "type": "git",
     "url": "https://github.com/nsarrazin/pep723-uv-interpreter"
   },
+  "icon": "icon.png",
+  "publisher": "nsarrazin",
   "keywords": [
     "vscode",
     "python",
