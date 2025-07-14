@@ -9,7 +9,19 @@ function hasPEP723Header(document: vscode.TextDocument): boolean {
   return /^#\s*\/\/\/\s*script/m.test(head);
 }
 
+/**
+ * Return true is the given position is inside a PEP 723 inline-script block.
+ *
+ * For the sake of user-friendliness, we allow some invalid syntax inside the
+ * block. For more information on how the inline script block is defined, see:
+ * https://packaging.python.org/en/latest/specifications/inline-script-metadata/#inline-script-metadata
+ */
 function isInsidePEP723Block(document: vscode.TextDocument, position: vscode.Position): boolean {
+  // Exit early if the current line is not a comment line to avoid slowing down the editor.
+  // Do this check first because it is the most common case and avoids checking the top 20 lines.
+  if (!document.lineAt(position.line).text.trim().startsWith("#")) {
+    return false;
+  }
   // Early exit if no PEP 723 header
   if (!hasPEP723Header(document)) {
     return false;
@@ -24,7 +36,7 @@ function isInsidePEP723Block(document: vscode.TextDocument, position: vscode.Pos
     } 
     // We have exited the script block if there is a non-comment or non-whitespace line or we have 
     // reached the end of the script block. Since there is only one script block, we can exit early.
-    else if (insideBlock && (!/^#?\s*$/.test(line) || !/^#\s*\/\/\/\s*$/.test(line))) {
+    else if (insideBlock && (!/^#.*$/.test(line) || /^#\s*\/\/\/\s*$/.test(line))) {
       return false;
     }
   }
@@ -132,6 +144,7 @@ function autoCommentBlock(textEditor: vscode.TextEditor, edit: vscode.TextEditor
   const currentLine = document.lineAt(position.line);
   // Check if we're in a PEP 723 block and on a comment line
   if (!isInsidePEP723Block(document, position) || !currentLine.text.match(/^\s*#/)) {
+    edit.insert(position, "\n");
     return;
   }
   const commentPrefix = getCommentPrefix(document, position);
