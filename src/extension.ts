@@ -9,6 +9,29 @@ function hasPEP723Header(document: vscode.TextDocument): boolean {
   return /^#\s*\/\/\/\s*script/m.test(head);
 }
 
+function isInsidePEP723Block(document: vscode.TextDocument, position: vscode.Position): boolean {
+  const text = document.getText();
+  const lines = text.split('\n');
+  
+  let insideBlock = false;
+  for (let i = 0; i <= position.line; i++) {
+    const line = lines[i];
+    if (/^#\s*\/\/\/\s*script\s*$/.test(line)) {
+      insideBlock = true;
+    } else if (/^#\s*\/\/\/\s*$/.test(line)) {
+      insideBlock = false;
+    }
+  }
+  
+  return insideBlock;
+}
+
+function getCommentPrefix(document: vscode.TextDocument, position: vscode.Position): string {
+  const line = document.lineAt(position.line);
+  const match = line.text.match(/^(\s*#\s*)/);
+  return match ? match[1] : "# ";
+}
+
 function createNewScript(): void {
   const template = `#!/usr/bin/env -S uv run --script
 # -*- coding: utf-8 -*-
@@ -97,6 +120,21 @@ function pickInterpreter(document: vscode.TextDocument): void {
   );
 }
 
+function autoCommentBlock(textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit) {
+  const document = textEditor.document;
+  const position = textEditor.selection.active;
+  const currentLine = document.lineAt(position.line);
+  // Check if we're in a PEP 723 block and on a comment line
+  if (!isInsidePEP723Block(document, position) || !currentLine.text.match(/^\s*#/)) {
+    return;
+  }
+  const commentPrefix = getCommentPrefix(document, position);
+  const newLinePosition = new vscode.Position(position.line + 1, 0);
+  
+  // Insert newline and comment prefix
+  edit.insert(position, '\n' + commentPrefix);
+}
+
 export function activate(ctx: vscode.ExtensionContext) {
   // Register the manual command
   const disposable = vscode.commands.registerCommand(
@@ -131,8 +169,17 @@ export function activate(ctx: vscode.ExtensionContext) {
     createNewScript
   );
 
+  // Register auto comment block command for PEP 723 blocks
+  const autoCommentDisposable = vscode.commands.registerTextEditorCommand(
+    "pep723.autoComment",
+    (textEditor, edit, args) => {
+      autoCommentBlock(textEditor, edit);
+    }
+  );
+
   ctx.subscriptions.push(disposable);
   ctx.subscriptions.push(createScriptDisposable);
+  ctx.subscriptions.push(autoCommentDisposable);
 
   // Auto-pick functionality
   function autoPickIfEnabled(document: vscode.TextDocument): void {

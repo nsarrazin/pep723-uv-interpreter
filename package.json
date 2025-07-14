@@ -22,8 +22,36 @@
       {
         "command": "pep723.createScript",
         "title": "PEP723: Create New Script"
+      },
+      {
+        "command": "pep723.autoComment",
+        "title": "PEP723: Auto Comment",
+        "enablement": "editorTextFocus && editorLangId == python"
       }
     ],
+    "keybindings": [
+      {
+        "command": "pep723.autoComment",
+        "key": "enter",
+        "when": "editorTextFocus && editorLangId == python && config.pep723.autoCommentEnabled"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "pep723.pickInterpreter",
+          "when": "editorLangId == python"
+        },
+        {
+          "command": "pep723.createScript",
+          "when": "editorLangId == python"
+        },
+        {
+          "command": "pep723.autoComment",
+          "when": "never"
+        }
+      ]
+    },
     "configuration": {
       "title": "PEP723 Interpreter Picker",
       "properties": {
@@ -31,6 +59,11 @@
           "type": "boolean",
           "default": true,
           "description": "Enable or disable automatic interpreter picking on file open or switch."
+        },
+        "pep723.autoCommentEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable commenting on enter inside PEP 723 script blocks."
         }
       }
     }
