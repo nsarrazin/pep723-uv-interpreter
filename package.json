@@ -14,6 +14,13 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "grammars": [
+      {
+        "scopeName": "source.python.pep723-toml",
+        "path": "./syntaxes/python-pep723-injection.tmLanguage.json",
+        "injectTo": ["source.python"]
+      }
+    ],
     "commands": [
       {
         "command": "pep723.pickInterpreter",
