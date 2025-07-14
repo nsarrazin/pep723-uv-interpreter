@@ -10,16 +10,22 @@ function hasPEP723Header(document: vscode.TextDocument): boolean {
 }
 
 function isInsidePEP723Block(document: vscode.TextDocument, position: vscode.Position): boolean {
-  const text = document.getText();
-  const lines = text.split('\n');
+  // Early exit if no PEP 723 header
+  if (!hasPEP723Header(document)) {
+    return false;
+  }
   
   let insideBlock = false;
   for (let i = 0; i <= position.line; i++) {
-    const line = lines[i];
+    const line = document.lineAt(i).text;
+    // Start of script block
     if (/^#\s*\/\/\/\s*script\s*$/.test(line)) {
       insideBlock = true;
-    } else if (/^#\s*\/\/\/\s*$/.test(line)) {
-      insideBlock = false;
+    } 
+    // We have exited the script block if there is a non-comment or non-whitespace line or we have 
+    // reached the end of the script block. Since there is only one script block, we can exit early.
+    else if (insideBlock && (!/^#?\s*$/.test(line) || !/^#\s*\/\/\/\s*$/.test(line))) {
+      return false;
     }
   }
   
