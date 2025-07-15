@@ -47,7 +47,7 @@ function isInsidePEP723Block(document: vscode.TextDocument, position: vscode.Pos
 function getCommentPrefix(document: vscode.TextDocument, position: vscode.Position): string {
   const line = document.lineAt(position.line);
   const match = line.text.match(/^(\s*#\s*)/);
-  return match ? match[1] : "# ";
+  return match ? match[1].substring(0, position.character) : "# ";
 }
 
 function createNewScript(): void {
@@ -147,11 +147,17 @@ function autoCommentBlock(textEditor: vscode.TextEditor, edit: vscode.TextEditor
     edit.insert(position, "\n");
     return;
   }
+  // If the cursor is before the comment prefix, add the comment prefix before the newline
   const commentPrefix = getCommentPrefix(document, position);
-  const newLinePosition = new vscode.Position(position.line + 1, 0);
-  
+  if (
+    position.character <= currentLine.firstNonWhitespaceCharacterIndex && 
+    currentLine.text.trim().startsWith(commentPrefix)
+  ) {
+    edit.insert(position, commentPrefix + "\n");
+    return;
+  }  
   // Insert newline and comment prefix
-  edit.insert(position, '\n' + commentPrefix);
+  edit.insert(position, "\n" + commentPrefix);
 }
 
 export function activate(ctx: vscode.ExtensionContext) {
