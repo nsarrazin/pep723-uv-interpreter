@@ -1,22 +1,38 @@
 {
-  "name": "Python PEP723 Injection",
-  "scopeName": "source.python.pep723-toml",
+  "name": "Python Inline Script Metadata Injection",
+  "scopeName": "source.python.script-metadata-toml",
   "injectionSelector": "L:source.python",
   "patterns": [
     {
-      "begin": "^(#\\s*///\\s*script)\\s*$",
-      "end": "^(#\\s*///)\\s*$",
+      "begin": "^(#\\s*)(///\\s*)(script)\\s*$",
+      "end": "^(#\\s*)(///\\s*)$",
       "beginCaptures": {
+        "0": {
+          "name": "meta.script-metadata.start.python"
+        },
         "1": {
-          "name": "comment.line.number-sign.python meta.pep723.script.start.python"
+          "name": "comment.line.number-sign.python"
+        },
+        "2": {
+          "name": "keyword.control.directive.python"
+        },
+        "3": {
+          "name": "entity.name.type.script-metadata.python"
         }
+
       },
       "endCaptures": {
+        "0": {
+          "name": "meta.script-metadata.end.python"
+        },
         "1": {
-          "name": "comment.line.number-sign.python meta.pep723.script.end.python"
+          "name": "comment.line.number-sign.python"
+        },
+        "2": {
+          "name": "keyword.control.directive.python"
         }
       },
-      "contentName": "",
+      "contentName": "meta.script-metadata.python",
       "patterns": [
         {
           "match": "^(#\\s*)(.*)$",

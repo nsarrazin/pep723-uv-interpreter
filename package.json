@@ -16,7 +16,7 @@
   "contributes": {
     "grammars": [
       {
-        "scopeName": "source.python.pep723-toml",
+        "scopeName": "source.python.script-metadata-toml",
         "path": "./syntaxes/python-pep723-injection.tmLanguage.json",
         "injectTo": ["source.python"]
       }
