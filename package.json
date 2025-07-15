@@ -46,14 +46,6 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "pep723.pickInterpreter",
-          "when": "editorLangId == python"
-        },
-        {
-          "command": "pep723.createScript",
-          "when": "editorLangId == python"
-        },
-        {
           "command": "pep723.autoComment",
           "when": "never"
         }
