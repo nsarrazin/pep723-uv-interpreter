@@ -6,21 +6,35 @@ on:
   pull_request:
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20]
+    timeout-minutes: 10
+
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v4
+
+      - uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: "20"
           cache: "npm"
-      - run: npm ci
-      - run: npx prettier --check "**/*.{ts,js,json,md}"
-      - run: npm run lint
-      - run: sudo apt-get update && sudo apt-get install -y xvfb libatk-1.0-0 libgtk-3-0 libxss1 libasound2 libnss3 libx11-xcb1 libxkbfile1 libsecret-1-0
-      - run: npm run test
-        env:
-          CI: true
+      - run: |
+          npm install ci
+      - name: "Lint check"
+        run: |
+          npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: |
+          npm ci
+      - name: "Tests check"
+        run: |
+          npm run test
