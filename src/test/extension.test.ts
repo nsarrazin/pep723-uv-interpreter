@@ -38,6 +38,9 @@ suite("PEP723 Interpreter Extension Test Suite", () => {
       get: sandbox.stub(),
       update: sandbox.stub().resolves(),
     };
+    sandbox
+      .stub(vscode.commands, "registerTextEditorCommand")
+      .returns({ dispose: () => {} });
   });
 
   teardown(() => {
@@ -95,7 +98,7 @@ print("Hello, World!")`;
         assert.strictEqual(
           hasHeader,
           true,
-          `Should detect header: ${variation}`
+          `Should detect header: ${variation}`,
         );
       });
     });
@@ -110,7 +113,7 @@ print("Hello, World!")`;
       // Mock vscode.commands.registerCommand
       const registerCommandStub = sandbox.stub(
         vscode.commands,
-        "registerCommand"
+        "registerCommand",
       );
       registerCommandStub.returns({ dispose: () => {} });
 
@@ -127,7 +130,7 @@ print("Hello, World!")`;
 
       assert.ok(
         registerCommandStub.calledWith("pep723.pickInterpreter"),
-        "Should register pickInterpreter command"
+        "Should register pickInterpreter command",
       );
     });
 
@@ -142,11 +145,11 @@ print("Hello, World!")`;
         .returns({ dispose: () => {} });
       const onDidChangeActiveTextEditorStub = sandbox.stub(
         vscode.window,
-        "onDidChangeActiveTextEditor"
+        "onDidChangeActiveTextEditor",
       );
       const onDidOpenTextDocumentStub = sandbox.stub(
         vscode.workspace,
-        "onDidOpenTextDocument"
+        "onDidOpenTextDocument",
       );
       onDidChangeActiveTextEditorStub.returns({ dispose: () => {} });
       onDidOpenTextDocumentStub.returns({ dispose: () => {} });
@@ -156,11 +159,11 @@ print("Hello, World!")`;
 
       assert.ok(
         onDidChangeActiveTextEditorStub.called,
-        "Should register onDidChangeActiveTextEditor handler"
+        "Should register onDidChangeActiveTextEditor handler",
       );
       assert.ok(
         onDidOpenTextDocumentStub.called,
-        "Should register onDidOpenTextDocument handler"
+        "Should register onDidOpenTextDocument handler",
       );
     });
   });
@@ -169,7 +172,7 @@ print("Hello, World!")`;
     test("should respect enableAutoPick configuration", () => {
       const getConfigurationStub = sandbox.stub(
         vscode.workspace,
-        "getConfiguration"
+        "getConfiguration",
       );
       getConfigurationStub.withArgs("pep723").returns({
         get: sandbox.stub().withArgs("enableAutoPick", true).returns(false),
@@ -184,14 +187,14 @@ print("Hello, World!")`;
       assert.strictEqual(
         enableAutoPick,
         false,
-        "Should return false when configured to disable auto-pick"
+        "Should return false when configured to disable auto-pick",
       );
     });
 
     test("should default to true for enableAutoPick", () => {
       const getConfigurationStub = sandbox.stub(
         vscode.workspace,
-        "getConfiguration"
+        "getConfiguration",
       );
       getConfigurationStub.withArgs("pep723").returns({
         get: sandbox.stub().withArgs("enableAutoPick", true).returns(true),
@@ -206,7 +209,7 @@ print("Hello, World!")`;
       assert.strictEqual(
         enableAutoPick,
         true,
-        "Should default to true for enableAutoPick"
+        "Should default to true for enableAutoPick",
       );
     });
   });
@@ -215,7 +218,7 @@ print("Hello, World!")`;
     test("should show message when no active editor", async () => {
       const showInformationMessageStub = sandbox.stub(
         vscode.window,
-        "showInformationMessage"
+        "showInformationMessage",
       );
       sandbox.stub(vscode.window, "activeTextEditor").value(null);
 
@@ -246,14 +249,14 @@ print("Hello, World!")`;
 
       assert.ok(
         showInformationMessageStub.calledWith("No active editor."),
-        "Should show no active editor message"
+        "Should show no active editor message",
       );
     });
 
     test("should show message when no PEP723 header found", async () => {
       const showInformationMessageStub = sandbox.stub(
         vscode.window,
-        "showInformationMessage"
+        "showInformationMessage",
       );
 
       mockDocument.getText.returns('# Regular Python file\nprint("Hello")');
@@ -286,18 +289,18 @@ print("Hello, World!")`;
 
       assert.ok(
         showInformationMessageStub.calledWith("No PEP 723 header found."),
-        "Should show no PEP723 header message"
+        "Should show no PEP723 header message",
       );
     });
 
     test("should create new script with PEP723 scaffolding", async () => {
       const openTextDocumentStub = sandbox.stub(
         vscode.workspace,
-        "openTextDocument"
+        "openTextDocument",
       );
       const showTextDocumentStub = sandbox.stub(
         vscode.window,
-        "showTextDocument"
+        "showTextDocument",
       );
 
       openTextDocumentStub.resolves({} as any);
@@ -335,16 +338,16 @@ print("Hello, World!")`;
       assert.ok(callArgs.content, "Should have content");
       assert.ok(
         callArgs.content.includes("# /// script"),
-        "Should include PEP723 metadata"
+        "Should include PEP723 metadata",
       );
       assert.ok(
         callArgs.content.includes("#!/usr/bin/env -S uv run --script"),
-        "Should include shebang"
+        "Should include shebang",
       );
       assert.strictEqual(
         callArgs.language,
         "python",
-        "Should set language to python"
+        "Should set language to python",
       );
     });
   });
@@ -361,12 +364,12 @@ print("Hello, World!")`;
       assert.strictEqual(
         nonPythonDocument.languageId,
         "javascript",
-        "Should identify non-Python files"
+        "Should identify non-Python files",
       );
       assert.notStrictEqual(
         nonPythonDocument.languageId,
         "python",
-        "Should not process non-Python files"
+        "Should not process non-Python files",
       );
     });
 
@@ -374,7 +377,7 @@ print("Hello, World!")`;
       assert.strictEqual(
         mockDocument.languageId,
         "python",
-        "Should process Python files"
+        "Should process Python files",
       );
     });
   });
@@ -403,7 +406,7 @@ import requests`;
       // Mock the configuration to enable auto-pick
       const getConfigurationStub = sandbox.stub(
         vscode.workspace,
-        "getConfiguration"
+        "getConfiguration",
       );
       getConfigurationStub.withArgs("pep723").returns({
         get: sandbox.stub().withArgs("enableAutoPick", true).returns(true),
@@ -424,7 +427,7 @@ import requests`;
       assert.strictEqual(
         isAutoPickEnabled,
         true,
-        "Should have auto-pick enabled"
+        "Should have auto-pick enabled",
       );
       assert.strictEqual(isPythonFile, true, "Should be Python file");
     });

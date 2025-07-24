@@ -16,7 +16,10 @@ function hasPEP723Header(document: vscode.TextDocument): boolean {
  * block. For more information on how the inline script block is defined, see:
  * https://packaging.python.org/en/latest/specifications/inline-script-metadata/#inline-script-metadata
  */
-function isInsidePEP723Block(document: vscode.TextDocument, position: vscode.Position): boolean {
+function isInsidePEP723Block(
+  document: vscode.TextDocument,
+  position: vscode.Position,
+): boolean {
   // Exit early if the current line is not a comment line to avoid slowing down the editor.
   // Do this check first because it is the most common case and avoids checking the top 20 lines.
   if (!document.lineAt(position.line).text.trim().startsWith("#")) {
@@ -26,25 +29,31 @@ function isInsidePEP723Block(document: vscode.TextDocument, position: vscode.Pos
   if (!hasPEP723Header(document)) {
     return false;
   }
-  
+
   let insideBlock = false;
   for (let i = 0; i <= position.line; i++) {
     const line = document.lineAt(i).text;
     // Start of script block
     if (/^#\s*\/\/\/\s*script\s*$/.test(line)) {
       insideBlock = true;
-    } 
-    // We have exited the script block if there is a non-comment or non-whitespace line or we have 
+    }
+    // We have exited the script block if there is a non-comment or non-whitespace line or we have
     // reached the end of the script block. Since there is only one script block, we can exit early.
-    else if (insideBlock && (!/^#.*$/.test(line) || /^#\s*\/\/\/\s*$/.test(line))) {
+    else if (
+      insideBlock &&
+      (!/^#.*$/.test(line) || /^#\s*\/\/\/\s*$/.test(line))
+    ) {
       return false;
     }
   }
-  
+
   return insideBlock;
 }
 
-function getCommentPrefix(document: vscode.TextDocument, position: vscode.Position): string {
+function getCommentPrefix(
+  document: vscode.TextDocument,
+  position: vscode.Position,
+): string {
   const line = document.lineAt(position.line);
   const match = line.text.match(/^(\s*#\s*)/);
   return match ? match[1].substring(0, position.character) : "# ";
@@ -86,7 +95,7 @@ if __name__ == '__main__':
       },
       (err) => {
         vscode.window.showErrorMessage(`Failed to create new script: ${err}`);
-      }
+      },
     );
 }
 
@@ -132,30 +141,36 @@ function pickInterpreter(document: vscode.TextDocument): void {
         },
         (e) => {
           vscode.window.showErrorMessage(`Failed to set interpreter: ${e}`);
-        }
+        },
       );
-    }
+    },
   );
 }
 
-function autoCommentBlock(textEditor: vscode.TextEditor, edit: vscode.TextEditorEdit) {
+function autoCommentBlock(
+  textEditor: vscode.TextEditor,
+  edit: vscode.TextEditorEdit,
+) {
   const document = textEditor.document;
   const position = textEditor.selection.active;
   const currentLine = document.lineAt(position.line);
   // Check if we're in a PEP 723 block and on a comment line
-  if (!isInsidePEP723Block(document, position) || !currentLine.text.match(/^\s*#/)) {
+  if (
+    !isInsidePEP723Block(document, position) ||
+    !currentLine.text.match(/^\s*#/)
+  ) {
     edit.insert(position, "\n");
     return;
   }
   // If the cursor is before the comment prefix, add the comment prefix before the newline
   const commentPrefix = getCommentPrefix(document, position);
   if (
-    position.character <= currentLine.firstNonWhitespaceCharacterIndex && 
+    position.character <= currentLine.firstNonWhitespaceCharacterIndex &&
     currentLine.text.trim().startsWith(commentPrefix)
   ) {
     edit.insert(position, commentPrefix + "\n");
     return;
-  }  
+  }
   // Insert newline and comment prefix
   edit.insert(position, "\n" + commentPrefix);
 }
@@ -174,7 +189,7 @@ export function activate(ctx: vscode.ExtensionContext) {
       const doc = editor.document;
       if (doc.languageId !== "python") {
         vscode.window.showInformationMessage(
-          "This command only works with Python files."
+          "This command only works with Python files.",
         );
         return;
       }
@@ -185,13 +200,13 @@ export function activate(ctx: vscode.ExtensionContext) {
       }
 
       pickInterpreter(doc);
-    }
+    },
   );
 
   // Register the create script command
   const createScriptDisposable = vscode.commands.registerCommand(
     "pep723.createScript",
-    createNewScript
+    createNewScript,
   );
 
   // Register auto comment block command for PEP 723 blocks
@@ -199,7 +214,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     "pep723.autoComment",
     (textEditor, edit, args) => {
       autoCommentBlock(textEditor, edit);
-    }
+    },
   );
 
   ctx.subscriptions.push(disposable);
@@ -226,14 +241,14 @@ export function activate(ctx: vscode.ExtensionContext) {
       if (editor) {
         autoPickIfEnabled(editor.document);
       }
-    })
+    }),
   );
 
   // Handle when documents are opened
   ctx.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument((document) => {
       autoPickIfEnabled(document);
-    })
+    }),
   );
 
   // Check the current active editor when extension activates

@@ -55,7 +55,6 @@ If you prefer not to auto-run, you can manually invoke the command:
 ### Configuration
 
 - `pep723.enableAutoPick` (boolean, default `true`)
-
   - Enable or disable automatic interpreter picking on file open or switch.
 
 ### Development
