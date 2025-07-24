@@ -2,7 +2,7 @@
   "name": "pep723-uv-interpreter",
   "displayName": "Auto-interpreter for PEP723 (uv)",
   "description": "Automatically sets your interpreter with uv when working with scripts containing inline metadata (PEP 723)",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.99.0"
   },
