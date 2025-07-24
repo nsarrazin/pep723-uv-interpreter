@@ -27,7 +27,7 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - run: npm run test   --if-present
+      - run: xvfb-run -a npm run test   --if-present
       - run: npm run lint   --if-present
 
   publish:
