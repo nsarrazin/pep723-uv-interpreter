@@ -38,6 +38,9 @@ suite("PEP723 Interpreter Extension Test Suite", () => {
       get: sandbox.stub(),
       update: sandbox.stub().resolves(),
     };
+    sandbox
+      .stub(vscode.commands, "registerTextEditorCommand")
+      .returns({ dispose: () => {} });
   });
 
   teardown(() => {
