@@ -10,10 +10,10 @@ A Visual Studio Code extension that automatically discovers and sets the Python 
 - Optionally auto-runs on file open or switching editors
 
 ### Prerequisites
-
-- [Node.js](https://nodejs.org/) v16 or higher
-- [VS Code](https://code.visualstudio.com/) v1.60.0 or higher
 - [uv](https://github.com/jaraco/uv) installed and on your `PATH`
+
+> [!WARNING]
+> You must run the script yourself once in order for `uv` to create the environment so the extension can find it. You also need to run the script when updating dependencies to ensure they get picked up. 
 
 ### Installation
 
