@@ -112,35 +112,53 @@ function pickInterpreter(document: vscode.TextDocument): void {
   // Get the file path for the current document
   const filePath = document.uri.fsPath;
 
-  // run uv to find the interpreter for this specific script
+  // First run uv sync to ensure the environment exists
   exec(
-    `uv python find --script "${filePath}"`,
+    `uv sync --script "${filePath}"`,
     { cwd: vscode.workspace.rootPath },
     (err, stdout, stderr) => {
       if (err) {
-        vscode.window.showErrorMessage(`uv error: ${stderr || err.message}`);
-        return;
-      }
-      const interp = stdout.trim();
-      if (!interp) {
-        vscode.window.showErrorMessage("No interpreter returned.");
+        vscode.window.showErrorMessage(
+          `uv sync error: ${stderr || err.message}`,
+        );
         return;
       }
 
-      // Determine the appropriate configuration target
-      const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
-      const configTarget = workspaceFolder
-        ? vscode.ConfigurationTarget.WorkspaceFolder
-        : vscode.ConfigurationTarget.Global;
+      // After sync, run uv python find to get the interpreter
+      exec(
+        `uv python find --script "${filePath}"`,
+        { cwd: vscode.workspace.rootPath },
+        (err, stdout, stderr) => {
+          if (err) {
+            vscode.window.showErrorMessage(
+              `uv python find error: ${stderr || err.message}`,
+            );
+            return;
+          }
+          const interp = stdout.trim();
+          if (!interp) {
+            vscode.window.showErrorMessage("No interpreter returned.");
+            return;
+          }
 
-      // Update the workspace or global setting
-      const cfg = vscode.workspace.getConfiguration("python", document.uri);
-      cfg.update("defaultInterpreterPath", interp, configTarget).then(
-        () => {
-          const scope = workspaceFolder ? "workspace" : "global";
-        },
-        (e) => {
-          vscode.window.showErrorMessage(`Failed to set interpreter: ${e}`);
+          // Determine the appropriate configuration target
+          const workspaceFolder = vscode.workspace.getWorkspaceFolder(
+            document.uri,
+          );
+          const configTarget = workspaceFolder
+            ? vscode.ConfigurationTarget.WorkspaceFolder
+            : vscode.ConfigurationTarget.Global;
+
+          // Update the workspace or global setting
+          const cfg = vscode.workspace.getConfiguration("python", document.uri);
+          cfg.update("defaultInterpreterPath", interp, configTarget).then(
+            () => {
+              const scope = workspaceFolder ? "workspace" : "global";
+            },
+            (e) => {
+              vscode.window.showErrorMessage(`Failed to set interpreter: ${e}`);
+            },
+          );
         },
       );
     },
