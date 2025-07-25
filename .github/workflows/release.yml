@@ -82,3 +82,7 @@ jobs:
             exit 0
           fi
           npx ovsx publish extension.vsix -p "$OVSX_TOKEN"
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" extension.vsix --generate-notes
