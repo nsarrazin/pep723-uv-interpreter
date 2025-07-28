@@ -147,7 +147,7 @@ function pickInterpreter(document: vscode.TextDocument): void {
   );
 }
 
-function autoCommentBlock(
+async function autoCommentBlock(
   textEditor: vscode.TextEditor,
   edit: vscode.TextEditorEdit,
 ) {
@@ -160,6 +160,7 @@ function autoCommentBlock(
     !currentLine.text.match(/^\s*#/)
   ) {
     edit.insert(position, "\n");
+    await vscode.commands.executeCommand("type", { text: "\n" });
     return;
   }
   // If the cursor is before the comment prefix, add the comment prefix before the newline
