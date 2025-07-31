@@ -159,7 +159,6 @@ async function autoCommentBlock(
     !isInsidePEP723Block(document, position) ||
     !currentLine.text.match(/^\s*#/)
   ) {
-    edit.insert(position, "\n");
     await vscode.commands.executeCommand("type", { text: "\n" });
     return;
   }
