@@ -392,6 +392,451 @@ print("Hello, World!")`;
     });
   });
 
+  suite("UV Command Execution", () => {
+    let execStub: sinon.SinonStub;
+
+    setup(() => {
+      execStub = sandbox.stub(require("child_process"), "exec");
+    });
+
+    teardown(() => {
+      if (execStub) {
+        execStub.reset();
+      }
+    });
+
+    test("should run uv sync before uv python find", (done) => {
+      const pep723Content = `# /// script
+# requires-python = ">=3.11"
+# dependencies = ["requests"]
+# ///
+
+import requests`;
+
+      mockDocument.getText.returns(pep723Content);
+      mockDocument.uri = { fsPath: "/test/script.py" };
+
+      let execCallCount = 0;
+      // Mock successful uv sync
+      execStub.onFirstCall().callsFake((cmd, options, callback) => {
+        execCallCount++;
+        assert.ok(
+          cmd.includes('uv sync --script "/test/script.py"'),
+          "First call should be uv sync with script path",
+        );
+        callback(null, "", "");
+      });
+      // Mock successful uv python find
+      execStub.onSecondCall().callsFake((cmd, options, callback) => {
+        execCallCount++;
+        assert.ok(
+          cmd.includes('uv python find --script "/test/script.py"'),
+          "Second call should be uv python find with script path",
+        );
+        callback(null, "/path/to/python", "");
+
+        // Assert that both calls were made
+        assert.strictEqual(execCallCount, 2, "Should call exec twice");
+        done();
+      });
+
+      const getConfigurationStub = sandbox.stub(
+        vscode.workspace,
+        "getConfiguration",
+      );
+      // Mock pep723 configuration for autoPickIfEnabled
+      getConfigurationStub.withArgs("pep723").returns({
+        get: sandbox.stub().withArgs("enableAutoPick", true).returns(true),
+        has: sandbox.stub(),
+        inspect: sandbox.stub(),
+        update: sandbox.stub(),
+      } as any);
+      // Mock python configuration for interpreter setting
+      getConfigurationStub.withArgs("python", mockDocument.uri).returns({
+        get: sandbox.stub(),
+        has: sandbox.stub(),
+        inspect: sandbox.stub(),
+        update: sandbox.stub().resolves(),
+      } as any);
+      sandbox.stub(vscode.workspace, "getWorkspaceFolder").returns(undefined);
+      sandbox.stub(vscode.workspace, "rootPath").value("/test");
+
+      // Simulate the pickInterpreter function being called
+      // We need to test this indirectly since the function isn't exported
+      const context = { subscriptions: [] };
+      let pickInterpreterCallback: any;
+
+      sandbox
+        .stub(vscode.commands, "registerCommand")
+        .callsFake((command: string, callback: () => void) => {
+          if (command === "pep723.pickInterpreter") {
+            pickInterpreterCallback = callback;
+          }
+          return { dispose: () => {} };
+        });
+
+      sandbox
+        .stub(vscode.window, "onDidChangeActiveTextEditor")
+        .returns({ dispose: () => {} });
+      sandbox
+        .stub(vscode.workspace, "onDidOpenTextDocument")
+        .returns({ dispose: () => {} });
+      sandbox.stub(vscode.window, "activeTextEditor").value({
+        document: mockDocument,
+      });
+
+      extension.activate(context as any);
+
+      // Execute the pickInterpreter command
+      pickInterpreterCallback();
+    });
+
+    test("should handle uv sync error gracefully", (done) => {
+      const pep723Content = `# /// script
+# requires-python = ">=3.11"
+# dependencies = ["requests"]
+# ///
+
+import requests`;
+
+      mockDocument.getText.returns(pep723Content);
+      mockDocument.uri = { fsPath: "/test/script.py" };
+
+      let callCount = 0;
+      // Mock failed uv sync - should only be called once
+      execStub.callsFake((cmd, options, callback) => {
+        callCount++;
+        assert.ok(
+          cmd.includes('uv sync --script "/test/script.py"'),
+          "Should call uv sync with script path",
+        );
+        assert.strictEqual(callCount, 1, "Should only call exec once");
+        callback(new Error("sync failed"), "", "Sync error");
+
+        // Check that error message was shown and no second exec call
+        setTimeout(() => {
+          assert.strictEqual(
+            callCount,
+            1,
+            "Should only call exec once (sync fails)",
+          );
+          assert.ok(
+            showErrorMessageStub.calledWith("uv sync error: Sync error"),
+            "Should show sync error message",
+          );
+          done();
+        }, 5);
+      });
+
+      const showErrorMessageStub = sandbox.stub(
+        vscode.window,
+        "showErrorMessage",
+      );
+      // Mock pep723 configuration for autoPickIfEnabled - DISABLE auto-pick for this test
+      const getConfigurationStub = sandbox.stub(
+        vscode.workspace,
+        "getConfiguration",
+      );
+      getConfigurationStub.withArgs("pep723").returns({
+        get: sandbox.stub().withArgs("enableAutoPick", true).returns(false),
+        has: sandbox.stub(),
+        inspect: sandbox.stub(),
+        update: sandbox.stub(),
+      } as any);
+      sandbox.stub(vscode.workspace, "rootPath").value("/test");
+
+      const context = { subscriptions: [] };
+      let pickInterpreterCallback: any;
+
+      sandbox
+        .stub(vscode.commands, "registerCommand")
+        .callsFake((command: string, callback: () => void) => {
+          if (command === "pep723.pickInterpreter") {
+            pickInterpreterCallback = callback;
+          }
+          return { dispose: () => {} };
+        });
+
+      sandbox
+        .stub(vscode.window, "onDidChangeActiveTextEditor")
+        .returns({ dispose: () => {} });
+      sandbox
+        .stub(vscode.workspace, "onDidOpenTextDocument")
+        .returns({ dispose: () => {} });
+      sandbox.stub(vscode.window, "activeTextEditor").value({
+        document: mockDocument,
+      });
+
+      extension.activate(context as any);
+
+      // Execute the pickInterpreter command
+      pickInterpreterCallback();
+    });
+
+    test("should handle uv python find error after successful sync", (done) => {
+      const pep723Content = `# /// script
+# requires-python = ">=3.11"
+# dependencies = ["requests"]
+# ///
+
+import requests`;
+
+      mockDocument.getText.returns(pep723Content);
+      mockDocument.uri = { fsPath: "/test/script.py" };
+
+      let execCallCount = 0;
+      // Mock successful uv sync
+      execStub.onFirstCall().callsFake((cmd, options, callback) => {
+        execCallCount++;
+        assert.ok(
+          cmd.includes('uv sync --script "/test/script.py"'),
+          "First call should be uv sync with script path",
+        );
+        callback(null, "", "");
+      });
+      // Mock failed uv python find
+      execStub.onSecondCall().callsFake((cmd, options, callback) => {
+        execCallCount++;
+        assert.ok(
+          cmd.includes('uv python find --script "/test/script.py"'),
+          "Second call should be uv python find with script path",
+        );
+        callback(new Error("find failed"), "", "Find error");
+
+        // Assert that both calls were made and error was shown
+        assert.strictEqual(execCallCount, 2, "Should call exec twice");
+        assert.ok(
+          showErrorMessageStub.calledWith("uv python find error: Find error"),
+          "Should show find error message",
+        );
+        done();
+      });
+
+      const showErrorMessageStub = sandbox.stub(
+        vscode.window,
+        "showErrorMessage",
+      );
+      // Mock pep723 configuration for autoPickIfEnabled
+      const getConfigurationStub = sandbox.stub(
+        vscode.workspace,
+        "getConfiguration",
+      );
+      getConfigurationStub.withArgs("pep723").returns({
+        get: sandbox.stub().withArgs("enableAutoPick", true).returns(true),
+        has: sandbox.stub(),
+        inspect: sandbox.stub(),
+        update: sandbox.stub(),
+      } as any);
+      sandbox.stub(vscode.workspace, "rootPath").value("/test");
+
+      const context = { subscriptions: [] };
+      let pickInterpreterCallback: any;
+
+      sandbox
+        .stub(vscode.commands, "registerCommand")
+        .callsFake((command: string, callback: () => void) => {
+          if (command === "pep723.pickInterpreter") {
+            pickInterpreterCallback = callback;
+          }
+          return { dispose: () => {} };
+        });
+
+      sandbox
+        .stub(vscode.window, "onDidChangeActiveTextEditor")
+        .returns({ dispose: () => {} });
+      sandbox
+        .stub(vscode.workspace, "onDidOpenTextDocument")
+        .returns({ dispose: () => {} });
+      sandbox.stub(vscode.window, "activeTextEditor").value({
+        document: mockDocument,
+      });
+
+      extension.activate(context as any);
+
+      // Execute the pickInterpreter command
+      pickInterpreterCallback();
+    });
+
+    test("should handle empty interpreter response", (done) => {
+      const pep723Content = `# /// script
+# requires-python = ">=3.11"
+# dependencies = ["requests"]
+# ///
+
+import requests`;
+
+      mockDocument.getText.returns(pep723Content);
+      mockDocument.uri = { fsPath: "/test/script.py" };
+
+      let execCallCount = 0;
+      // Mock successful uv sync
+      execStub.onFirstCall().callsFake((cmd, options, callback) => {
+        execCallCount++;
+        assert.ok(
+          cmd.includes('uv sync --script "/test/script.py"'),
+          "First call should be uv sync with script path",
+        );
+        callback(null, "", "");
+      });
+      // Mock uv python find returning empty string
+      execStub.onSecondCall().callsFake((cmd, options, callback) => {
+        execCallCount++;
+        assert.ok(
+          cmd.includes('uv python find --script "/test/script.py"'),
+          "Second call should be uv python find with script path",
+        );
+        callback(null, "", "");
+
+        // Assert that both calls were made and error was shown for empty response
+        assert.strictEqual(execCallCount, 2, "Should call exec twice");
+        assert.ok(
+          showErrorMessageStub.calledWith("No interpreter returned."),
+          "Should show no interpreter message",
+        );
+        done();
+      });
+
+      const showErrorMessageStub = sandbox.stub(
+        vscode.window,
+        "showErrorMessage",
+      );
+      // Mock pep723 configuration for autoPickIfEnabled
+      const getConfigurationStub = sandbox.stub(
+        vscode.workspace,
+        "getConfiguration",
+      );
+      getConfigurationStub.withArgs("pep723").returns({
+        get: sandbox.stub().withArgs("enableAutoPick", true).returns(true),
+        has: sandbox.stub(),
+        inspect: sandbox.stub(),
+        update: sandbox.stub(),
+      } as any);
+      sandbox.stub(vscode.workspace, "rootPath").value("/test");
+
+      const context = { subscriptions: [] };
+      let pickInterpreterCallback: any;
+
+      sandbox
+        .stub(vscode.commands, "registerCommand")
+        .callsFake((command: string, callback: () => void) => {
+          if (command === "pep723.pickInterpreter") {
+            pickInterpreterCallback = callback;
+          }
+          return { dispose: () => {} };
+        });
+
+      sandbox
+        .stub(vscode.window, "onDidChangeActiveTextEditor")
+        .returns({ dispose: () => {} });
+      sandbox
+        .stub(vscode.workspace, "onDidOpenTextDocument")
+        .returns({ dispose: () => {} });
+      sandbox.stub(vscode.window, "activeTextEditor").value({
+        document: mockDocument,
+      });
+
+      extension.activate(context as any);
+
+      // Execute the pickInterpreter command
+      pickInterpreterCallback();
+    });
+
+    test("should successfully set interpreter after sync and find", (done) => {
+      const pep723Content = `# /// script
+# requires-python = ">=3.11"
+# dependencies = ["requests"]
+# ///
+
+import requests`;
+
+      mockDocument.getText.returns(pep723Content);
+      mockDocument.uri = { fsPath: "/test/script.py" };
+
+      const updateStub = sandbox.stub().resolves();
+      let execCallCount = 0;
+      // Mock successful uv sync
+      execStub.onFirstCall().callsFake((cmd, options, callback) => {
+        execCallCount++;
+        assert.ok(
+          cmd.includes('uv sync --script "/test/script.py"'),
+          "First call should be uv sync with script path",
+        );
+        callback(null, "", "");
+      });
+      // Mock successful uv python find
+      execStub.onSecondCall().callsFake((cmd, options, callback) => {
+        execCallCount++;
+        assert.ok(
+          cmd.includes('uv python find --script "/test/script.py"'),
+          "Second call should be uv python find with script path",
+        );
+        callback(null, "/path/to/python\n", "");
+
+        // Assert that both calls were made and interpreter was set
+        setTimeout(() => {
+          assert.strictEqual(execCallCount, 2, "Should call exec twice");
+          assert.ok(
+            updateStub.calledWith(
+              "defaultInterpreterPath",
+              "/path/to/python",
+              vscode.ConfigurationTarget.Global,
+            ),
+            "Should update interpreter configuration",
+          );
+          done();
+        }, 5);
+      });
+
+      const getConfigurationStub = sandbox.stub(
+        vscode.workspace,
+        "getConfiguration",
+      );
+      // Mock pep723 configuration for autoPickIfEnabled
+      getConfigurationStub.withArgs("pep723").returns({
+        get: sandbox.stub().withArgs("enableAutoPick", true).returns(true),
+        has: sandbox.stub(),
+        inspect: sandbox.stub(),
+        update: sandbox.stub(),
+      } as any);
+      // Mock python configuration for interpreter setting
+      getConfigurationStub.withArgs("python", mockDocument.uri).returns({
+        get: sandbox.stub(),
+        has: sandbox.stub(),
+        inspect: sandbox.stub(),
+        update: updateStub,
+      } as any);
+      sandbox.stub(vscode.workspace, "getWorkspaceFolder").returns(undefined);
+      sandbox.stub(vscode.workspace, "rootPath").value("/test");
+
+      const context = { subscriptions: [] };
+      let pickInterpreterCallback: any;
+
+      sandbox
+        .stub(vscode.commands, "registerCommand")
+        .callsFake((command: string, callback: () => void) => {
+          if (command === "pep723.pickInterpreter") {
+            pickInterpreterCallback = callback;
+          }
+          return { dispose: () => {} };
+        });
+
+      sandbox
+        .stub(vscode.window, "onDidChangeActiveTextEditor")
+        .returns({ dispose: () => {} });
+      sandbox
+        .stub(vscode.workspace, "onDidOpenTextDocument")
+        .returns({ dispose: () => {} });
+      sandbox.stub(vscode.window, "activeTextEditor").value({
+        document: mockDocument,
+      });
+
+      extension.activate(context as any);
+
+      // Execute the pickInterpreter command
+      pickInterpreterCallback();
+    });
+  });
+
   suite("Integration Tests", () => {
     test("should handle complete workflow for valid PEP723 file", async () => {
       const pep723Content = `# /// script
